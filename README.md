@@ -1,10 +1,10 @@
 # Deep-Learning-and-Software-Assignmrnt
 
--- 1.
+### 1.
 open cmd
 
--- 2.
+### 2.
 pip install -r requirements.txt
 
--- 3.
+### 3.
 Python UI-run.py
