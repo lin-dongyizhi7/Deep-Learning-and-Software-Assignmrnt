@@ -1,0 +1,5 @@
+defusedxml==0.7.1
+et_xmlfile==1.1.0
+joblib==1.4.2
+pytest==8.3.4
+traitlets==5.14.3
