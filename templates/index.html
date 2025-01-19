@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Weather Classification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .file-up {
+            opacity: 0;
+            width: 90px;
+            height: 15px;
+            z-index: 10;
+        }
+
+        .file-button {
+            position: relative;
+            width: 120px;
+            left: -110px;
+        }
+
+        .button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .log-container {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            overflow-y: auto;
+            height: 300px;
+            padding: 10px;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background-color: #ccc;
+            border-radius: 5px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background-color: #f0f0f0;
+        }
+
+        .status {
+            position: absolute;
+            top: 50px;
+            right: 100px;
+            font-size: 32px;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="file-input">
+                <input class="file-up" type="file" id="trainFileInput" accept=".xlsx,.xls"
+                    onchange="uploadTrainFile()" />
+                <button class="file-button" onclick="uploadTrainFile()">Select Train File</button>
+                <span id="trainFilePath">No train file selected</span>
+            </div>
+            <div class="file-input">
+                <input class="file-up" type="file" id="testFileInput" accept=".xlsx,.xls" onchange="uploadTestFile()" />
+                <button class="file-button" onclick="uploadTestFile()">Select Test File</button>
+                <span id="testFilePath">No test file selected</span>
+            </div>
+        </div>
+        <div class="buttons">
+            <button class="button" onclick="trainModel()">Train Model</button>
+            <button class="button" onclick="testModel()">Test Model</button>
+            <button class="button" onclick="clearLog()">Clear Log</button>
+            <button class="button" onclick="saveLog()">Save Log</button>
+        </div>
+        <div class="log-container" id="logContainer"></div>
+        <div class="status" id="statusIndicator">Ready</div>
+    </div>
+
+    <script>
+        // const baseUrl = 'http://127.0.0.1:666'
+        const baseUrl = ''
+        function uploadTrainFile() {
+            const fileInput = document.getElementById('trainFileInput');
+            const filePathElement = document.getElementById('trainFilePath');
+            if (fileInput.files.length > 0) {
+                filePathElement.textContent = fileInput.files[0].name;
+            } else {
+                filePathElement.textContent = 'No train file selected';
+            }
+        }
+
+        function uploadTestFile() {
+            const fileInput = document.getElementById('testFileInput');
+            const filePathElement = document.getElementById('testFilePath');
+            if (fileInput.files.length > 0) {
+                filePathElement.textContent = fileInput.files[0].name;
+            } else {
+                filePathElement.textContent = 'No test file selected';
+            }
+        }
+
+        async function trainModel() {
+            const trainFilePath = document.getElementById('trainFilePath').textContent;
+            if (!trainFilePath || trainFilePath === 'No train file selected') {
+                alert('Please select a train file.');
+                return;
+            }
+
+            updateStatus('Training...');
+
+            try {
+                const response = await fetch(baseUrl + '/train', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        trainFilePath: trainFilePath,
+                    })
+                });
+                const result = await response.json();
+                console.log(result);
+                appendLog(`${result.message}`);
+                updateStatus('Ready');
+            } catch (error) {
+                console.error(error);
+                appendLog('Error training model.');
+            }
+        }
+
+        async function testModel() {
+            const testFilePath = document.getElementById('testFilePath').textContent;
+            if (!testFilePath || testFilePath === 'No test file selected') {
+                alert('Please select a test file.');
+                return;
+            }
+
+            updateStatus('Testing...');
+
+            try {
+                const response = await fetch(baseUrl + '/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        testFilePath: testFilePath,
+                    })
+                });
+                const result = await response.json();
+                console.log(result);
+                appendLog('Test results:');
+                // 显示分类报告
+                appendLog('Classification Report:');
+                for (const [key, value] of Object.entries(result.classificationReport)) {
+                    if (typeof value === 'object') {
+                        appendLog(`${key}: f1-score=${value['f1-score']}, precision=${value['precision']}, recall=${value['recall']}, support=${value['support']}`);
+                    } else {
+                        appendLog(`Overall Accuracy: ${value}`);
+                    }
+                }
+
+                // 显示混淆矩阵
+                appendLog('Confusion Matrix:');
+                result.confusionMatrix.forEach(row => {
+                    appendLog(JSON.stringify(row));
+                });
+                updateStatus('Ready');
+            } catch (error) {
+                console.error(error);
+                appendLog('Error testing model.');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+        }
+
+        function saveLog() {
+            const logContainer = document.getElementById('logContainer');
+            const logText = logContainer.innerText;
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'log.txt';
+            link.click();
+        }
+
+        function appendLog(message) {
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML += `${message}<br>`;
+        }
+
+        function updateStatus(status) {
+            document.getElementById('statusIndicator').textContent = status;
+        }
+    </script>
+</body>
+
+</html>
