@@ -8,7 +8,9 @@ WORKDIR /app
 COPY . /app
 
 # 安装 Python 依赖
-RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip
+RUN pip install -r requirements.tx
 
 # 暴露应用程序的端口
 EXPOSE 8000
