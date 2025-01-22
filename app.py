@@ -35,13 +35,23 @@ def index():
 
 @app.route('/train', methods=['POST'])
 def train_model():
-    # data = json.loads(request.data)
     train_file_path = request.json.get('trainFilePath')
-    if not train_file_path or not os.path.exists(train_file_path):
-        return jsonify({'error': 'Invalid train file path'}), 400
-        # return JsonResponse.fail(msg='error: Invalid train file path')
-    
-    data = pd.read_excel(train_file_path)
+    train_data = request.json.get('trainData')
+    data = pd.DataFrame(train_data)
+    # 转换数据类型
+    numeric_columns = ['TEMP', 'TEMP_ATTRIBUTES', 'DEWP', 'DEWP_ATTRIBUTES', 'SLP', 'SLP_ATTRIBUTES',
+                       'STP', 'STP_ATTRIBUTES', 'VISIB', 'VISIB_ATTRIBUTES', 'WDSP', 'WDSP_ATTRIBUTES',
+                       'MXSPD', 'GUST', 'MAX_ATTRIBUTES', 'MIN_ATTRIBUTES', 'PRCP', 'FRSHTT', 'WEATHER_TYPE', 'SEASON']
+
+    for col in numeric_columns:
+        # 检查是否所有值都可以转换为float，否则保留原样或者转换为其他适当类型
+        try:
+            data[col] = data[col].astype(float)
+        except ValueError:
+            print(f"Column {col} contains non-numeric values and could not be converted to float.")
+
+    data = data.dropna()
+
     X = data.drop(['DATE', 'WEATHER_TYPE'], axis=1)
     y = data['WEATHER_TYPE']
 
@@ -71,20 +81,28 @@ def train_model():
     joblib.dump(scaler, scaler_path)
 
     return jsonify({'message': 'Model trained and saved successfully', 'modelPath': best_model_path, 'scalerPath': scaler_path})
-    # return JsonResponse.succuess(msg='Model trained and saved successfully', data={'modelPath': model_path, 'scalerPath': scaler_path})
 
 @app.route('/test', methods=['POST'])
 def test_model():
-    # data = json.loads(request.data)
     test_file_path = request.json.get('testFilePath')
+    test_data = request.json.get('testData')
+    data = pd.DataFrame(test_data)
+    # 转换数据类型
+    numeric_columns = ['TEMP', 'TEMP_ATTRIBUTES', 'DEWP', 'DEWP_ATTRIBUTES', 'SLP', 'SLP_ATTRIBUTES',
+                       'STP', 'STP_ATTRIBUTES', 'VISIB', 'VISIB_ATTRIBUTES', 'WDSP', 'WDSP_ATTRIBUTES',
+                       'MXSPD', 'GUST', 'MAX_ATTRIBUTES', 'MIN_ATTRIBUTES', 'PRCP', 'FRSHTT', 'WEATHER_TYPE', 'SEASON']
 
-    if not test_file_path or not os.path.exists(test_file_path) or not best_model_path or not scaler_path:
-        return jsonify({'error': 'Invalid parameters'}), 400
-        # return JsonResponse.fail(msg='error: Invalid parameters')
-    
-    test_data = pd.read_excel(test_file_path)
-    X_test = test_data.drop(['DATE', 'WEATHER_TYPE'], axis=1)
-    y_test = test_data['WEATHER_TYPE']
+    for col in numeric_columns:
+        # 检查是否所有值都可以转换为float，否则保留原样或者转换为其他适当类型
+        try:
+            data[col] = data[col].astype(float)
+        except ValueError:
+            print(f"Column {col} contains non-numeric values and could not be converted to float.")
+
+    data = data.dropna()
+
+    X_test = data.drop(['DATE', 'WEATHER_TYPE'], axis=1)
+    y_test = data['WEATHER_TYPE']
     
     scaler = joblib.load(scaler_path)
     X_test = scaler.transform(X_test)
@@ -96,7 +114,6 @@ def test_model():
     matrix = confusion_matrix(y_test, predictions).tolist()
 
     return jsonify({'classificationReport': report, 'confusionMatrix': matrix})
-    # return JsonResponse.succuess(msg='Test successfully', data={'classificationReport': report, 'confusionMatrix': matrix})
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=666, debug=True)

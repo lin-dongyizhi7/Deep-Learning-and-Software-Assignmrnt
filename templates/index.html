@@ -114,14 +114,40 @@
         <div class="status" id="statusIndicator">Ready</div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         // const baseUrl = 'http://127.0.0.1:666'
         const baseUrl = ''
+        let fileInner;
+
+        function parseCsv(data) {
+            let result = Papa.parse(data, { header: true });
+            {#let workbook = XLSX.read(data, {type: 'array'});#}
+            {#console.log(workbook);#}
+            {#/* 获取工作簿中的第一个表单 */#}
+            {#let firstSheetName = workbook.SheetNames[0];#}
+            {#/* 将表单转换为JSON格式 */#}
+            {#let result = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName]);#}
+            return result;
+        }
+
         function uploadTrainFile() {
             const fileInput = document.getElementById('trainFileInput');
             const filePathElement = document.getElementById('trainFilePath');
             if (fileInput.files.length > 0) {
-                filePathElement.textContent = fileInput.files[0].name;
+                const file = fileInput.files[0];
+                filePathElement.textContent = file.name;
+
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const content = e.target.result;
+                    const parsedCsv = parseCsv(content);
+                    console.log(parsedCsv)
+                    fileInner = parsedCsv;
+                };
+                reader.readAsText(file);
+
             } else {
                 filePathElement.textContent = 'No train file selected';
             }
@@ -131,7 +157,17 @@
             const fileInput = document.getElementById('testFileInput');
             const filePathElement = document.getElementById('testFilePath');
             if (fileInput.files.length > 0) {
-                filePathElement.textContent = fileInput.files[0].name;
+                const file = fileInput.files[0];
+                filePathElement.textContent = file.name;
+
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const content = e.target.result;
+                    const parsedCsv = parseCsv(content);
+                    console.log(parsedCsv)
+                    fileInner = parsedCsv;
+                };
+                reader.readAsText(file);
             } else {
                 filePathElement.textContent = 'No test file selected';
             }
@@ -152,6 +188,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         trainFilePath: trainFilePath,
+                        trainData: fileInner.data
                     })
                 });
                 const result = await response.json();
@@ -179,6 +216,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         testFilePath: testFilePath,
+                        testData: fileInner.data
                     })
                 });
                 const result = await response.json();
