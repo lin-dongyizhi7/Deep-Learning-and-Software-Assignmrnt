@@ -93,13 +93,13 @@
     <div class="container">
         <div class="header">
             <div class="file-input">
-                <input class="file-up" type="file" id="trainFileInput" accept=".xlsx,.xls"
+                <input class="file-up" type="file" id="trainFileInput" accept=".xlsx,.xls,.csv"
                     onchange="uploadTrainFile()" />
                 <button class="file-button" onclick="uploadTrainFile()">Select Train File</button>
                 <span id="trainFilePath">No train file selected</span>
             </div>
             <div class="file-input">
-                <input class="file-up" type="file" id="testFileInput" accept=".xlsx,.xls" onchange="uploadTestFile()" />
+                <input class="file-up" type="file" id="testFileInput" accept=".xlsx,.xls, .csv" onchange="uploadTestFile()" />
                 <button class="file-button" onclick="uploadTestFile()">Select Test File</button>
                 <span id="testFilePath">No test file selected</span>
             </div>
