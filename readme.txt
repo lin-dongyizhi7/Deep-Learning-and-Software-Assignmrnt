@@ -5,4 +5,4 @@ open cmd
 pip install -r requirements.txt
 
 3.
-Python UI-run.py
+Python app.py
