@@ -109,6 +109,7 @@ def test_model():
     
     best_model = joblib.load(best_model_path)
     predictions = best_model.predict(X_test)
+    predictions = predictions.tolist()
     
     report = classification_report(y_test, predictions, output_dict=True)
     matrix = confusion_matrix(y_test, predictions).tolist()
