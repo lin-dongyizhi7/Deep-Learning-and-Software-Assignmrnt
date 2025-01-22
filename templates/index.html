@@ -237,6 +237,7 @@
                 result.confusionMatrix.forEach(row => {
                     appendLog(JSON.stringify(row));
                 });
+                appendLog('Predictions:' + JSON.stringify(result.predictions));
                 updateStatus('Ready');
             } catch (error) {
                 console.error(error);

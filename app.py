@@ -113,7 +113,7 @@ def test_model():
     report = classification_report(y_test, predictions, output_dict=True)
     matrix = confusion_matrix(y_test, predictions).tolist()
 
-    return jsonify({'classificationReport': report, 'confusionMatrix': matrix})
+    return jsonify({'classificationReport': report, 'confusionMatrix': matrix, 'predictions': predictions })
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=666, debug=True)
