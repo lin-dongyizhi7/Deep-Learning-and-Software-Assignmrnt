@@ -1,13 +1,11 @@
-# from flask import request
+import numpy as np
 from flask import Flask, render_template, request, jsonify, send_from_directory
 
-# from json_flask import JsonFlask
-# from json_response import JsonResponse
 import pandas as pd
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, label_binarize
 from sklearn.neural_network import MLPClassifier
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve
 import joblib
 import os
 import sys
@@ -29,15 +27,7 @@ def resource_path(relative_path):
 best_model_path = resource_path("best_mlp_model.pkl")
 scaler_path = resource_path("scaler.pkl")
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/train', methods=['POST'])
-def train_model():
-    train_file_path = request.json.get('trainFilePath')
-    train_data = request.json.get('trainData')
-    data = pd.DataFrame(train_data)
+def handle_read_data(data):
     # 转换数据类型
     numeric_columns = ['TEMP', 'TEMP_ATTRIBUTES', 'DEWP', 'DEWP_ATTRIBUTES', 'SLP', 'SLP_ATTRIBUTES',
                        'STP', 'STP_ATTRIBUTES', 'VISIB', 'VISIB_ATTRIBUTES', 'WDSP', 'WDSP_ATTRIBUTES',
@@ -54,6 +44,19 @@ def train_model():
 
     X = data.drop(['DATE', 'WEATHER_TYPE'], axis=1)
     y = data['WEATHER_TYPE']
+    return X, y
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/train', methods=['POST'])
+def train_model():
+    train_file_path = request.json.get('trainFilePath')
+    train_data = request.json.get('trainData')
+    data = pd.DataFrame(train_data)
+
+    X, y = handle_read_data(data)
 
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
     scaler = StandardScaler()
@@ -87,34 +90,40 @@ def test_model():
     test_file_path = request.json.get('testFilePath')
     test_data = request.json.get('testData')
     data = pd.DataFrame(test_data)
-    # 转换数据类型
-    numeric_columns = ['TEMP', 'TEMP_ATTRIBUTES', 'DEWP', 'DEWP_ATTRIBUTES', 'SLP', 'SLP_ATTRIBUTES',
-                       'STP', 'STP_ATTRIBUTES', 'VISIB', 'VISIB_ATTRIBUTES', 'WDSP', 'WDSP_ATTRIBUTES',
-                       'MXSPD', 'GUST', 'MAX_ATTRIBUTES', 'MIN_ATTRIBUTES', 'PRCP', 'FRSHTT', 'WEATHER_TYPE', 'SEASON']
 
-    for col in numeric_columns:
-        # 检查是否所有值都可以转换为float，否则保留原样或者转换为其他适当类型
-        try:
-            data[col] = data[col].astype(float)
-        except ValueError:
-            print(f"Column {col} contains non-numeric values and could not be converted to float.")
-
-    data = data.dropna()
-
-    X_test = data.drop(['DATE', 'WEATHER_TYPE'], axis=1)
-    y_test = data['WEATHER_TYPE']
+    X_test, y_test = handle_read_data(data)
     
     scaler = joblib.load(scaler_path)
     X_test = scaler.transform(X_test)
     
     best_model = joblib.load(best_model_path)
     predictions = best_model.predict(X_test)
+    y_scores = best_model.predict_proba(X_test)
     predictions = predictions.tolist()
     
     report = classification_report(y_test, predictions, output_dict=True)
     matrix = confusion_matrix(y_test, predictions).tolist()
 
     return jsonify({'classificationReport': report, 'confusionMatrix': matrix, 'predictions': predictions })
+
+
+@app.route('/predict', methods=['POST'])
+def predict_model():
+    predict_file_path = request.json.get('predictFilePath')
+    predict_data = request.json.get('predictData')
+    data = pd.DataFrame(predict_data)
+
+    X_predict, y_predict = handle_read_data(data)
+
+    scaler = joblib.load(scaler_path)
+    X_test = scaler.transform(X_predict)
+
+    best_model = joblib.load(best_model_path)
+    predictions = best_model.predict(X_test)
+    predictions = predictions.tolist()
+
+    return jsonify({'predictions': predictions})
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=666, debug=True)
